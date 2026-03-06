@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SD_Testing_Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── CSS Variables ─────────────────────────────────────────── */
+    :root {
+      --bg:           #3f2e56;
+      --bg-light:     #4e3a68;
+      --bg-lighter:   #5a4475;
+      --accent:       #98d3eb;
+      --accent-dim:   rgba(152, 211, 235, 0.15);
+      --accent-border:rgba(152, 211, 235, 0.35);
+      --text:         #b0b0d8;
+      --text-bright:  #d4d4ee;
+      --text-muted:   #7878a8;
+      --gold:         #eead29;
+      --sidebar-w:    220px;
+      --header-h:     0px;
+      --radius:       10px;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────── */
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── Sidebar ───────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: rgba(0,0,0,0.2);
+      border-right: 1px solid var(--accent-border);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 24px 18px 24px 18px;
+      gap: 0;
+    }
+
+    .sidebar-logo {
+      width: 150px;
+      height: auto;
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .sidebar-user {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      color: var(--gold);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      letter-spacing: 0.02em;
+      border-top: 1px solid var(--accent-border);
+      padding-top: 14px;
+      width: 100%;
+      word-break: break-word;
+    }
+
+    .sidebar-user .label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: 'Roboto', sans-serif;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 2px;
+    }
+
+    .sidebar-user .value {
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    .sidebar-divider {
+      flex: 1;
+    }
+
+    .sidebar-footer {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Main chat area ────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--accent-border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0,0,0,0.1);
+    }
+
+    .chat-header h1 {
+      font-family: 'Roboto', sans-serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── Messages ──────────────────────────────────────────────── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 28px 12px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      scroll-behavior: smooth;
+    }
+
+    .messages::-webkit-scrollbar { width: 6px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb {
+      background: var(--accent-border);
+      border-radius: 3px;
+    }
+    .messages::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 82%;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user  { align-self: flex-end; align-items: flex-end; }
+    .message.agent { align-self: flex-start; align-items: flex-start; }
+
+    .message-role {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .message-bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      line-height: 1.65;
+      word-break: break-word;
+    }
+
+    .message.user .message-bubble {
+      background: var(--accent);
+      color: #1a1030;
+      border-bottom-right-radius: 3px;
+      font-weight: 500;
+    }
+
+    .message.agent .message-bubble {
+      background: var(--bg-light);
+      color: var(--text-bright);
+      border-bottom-left-radius: 3px;
+      border: 1px solid var(--accent-border);
+    }
+
+
+    /* ── Code blocks ───────────────────────────────────────────── */
+    .message-bubble {
+      white-space: normal;
+    }
+
+    .code-block-wrapper {
+      position: relative;
+      margin: 8px 0;
+    }
+
+
+    .copy-btn {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      background: transparent;
+      border: 1px solid var(--accent-border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+      outline: none;
+      z-index: 1;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--accent);
+    }
+
+    .code-lang-label {
+
+      position: absolute;
+      top: 6px;
+      right: 68px;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: 'Roboto', sans-serif;
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+      pointer-events: none;
+    }
+
+    .message-bubble pre {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(0,0,0,0.3);
+      border-radius: 6px;
+      padding: 12px 16px;
+      overflow-x: auto;
+      margin: 0;
+    }
+
+    .message-bubble pre code {
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.85rem;
+      color: var(--text-bright);
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      white-space: pre;
+    }
+
+    .message-bubble code {
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.88em;
+      background: rgba(0,0,0,0.25);
+      color: var(--text-bright);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .message-bubble p {
+      margin-bottom: 6px;
+    }
+
+    .message-bubble p:last-child {
+      margin-bottom: 0;
+    }
+
+
+    .user-copy-btn {
+      background: transparent;
+      border: 1px solid var(--text-muted);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+      outline: none;
+      align-self: flex-end;
+      margin-top: 4px;
+    }
+
+    .user-copy-btn:hover {
+      background: rgba(120, 120, 168, 0.15);
+      color: var(--text-bright);
+    }
+
+    /* ── Loading indicator ─────────────────────────────────────── */
+    .loading {
+      display: none;
+      align-self: flex-start;
+      padding: 12px 18px;
+      background: var(--bg-light);
+      border: 1px solid var(--accent-border);
+      border-radius: var(--radius);
+      border-bottom-left-radius: 3px;
+    }
+
+    .loading.visible { display: flex; gap: 5px; align-items: center; }
+
+    .loading span {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: bounce 1.2s infinite;
+    }
+    .loading span:nth-child(2) { animation-delay: 0.2s; }
+    .loading span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+      40%            { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* ── Input area ────────────────────────────────────────────── */
+    .input-area {
+      padding: 16px 28px 20px 28px;
+      border-top: 1px solid var(--accent-border);
+      background: rgba(0,0,0,0.1);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .input-area textarea {
+      flex: 1;
+      resize: none;
+      background: var(--bg-light);
+      border: 1px solid var(--accent-border);
+      border-radius: var(--radius);
+      color: var(--text-bright);
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.92rem;
+      padding: 11px 14px;
+      outline: none;
+      min-height: 46px;
+      max-height: 160px;
+      line-height: 1.5;
+      transition: border-color 0.2s;
+    }
+
+    .input-area textarea::placeholder { color: var(--text-muted); }
+
+    .input-area textarea:focus {
+      border-color: var(--accent);
+      background: var(--bg-lighter);
+    }
+
+    .input-area textarea::-webkit-scrollbar { width: 4px; }
+    .input-area textarea::-webkit-scrollbar-thumb { background: var(--accent-border); border-radius: 2px; }
+
+    .send-btn {
+      background: var(--accent);
+      color: #1a1030;
+      border: none;
+      border-radius: var(--radius);
+      padding: 11px 20px;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+      height: 46px;
+    }
+
+    .send-btn:hover { background: #b8e3f5; }
+    .send-btn:active { transform: scale(0.97); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Modal overlay ─────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 18, 45, 0.92);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.hidden { display: none; }
+
+    .modal {
+      background: var(--bg-light);
+      border: 1px solid var(--accent-border);
+      border-radius: 14px;
+      padding: 40px 36px 36px 36px;
+      width: 380px;
+      max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .modal-logo {
+      width: 130px;
+      margin: 0 auto 4px auto;
+      display: block;
+    }
+
+    .modal h2 {
+      font-family: 'Roboto', sans-serif;
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--accent);
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: -16px;
+    }
+
+    .modal-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .modal-field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--accent-border);
+      border-radius: 8px;
+      color: var(--text-bright);
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .modal-field input:focus { border-color: var(--accent); }
+    .modal-field input::placeholder { color: var(--text-muted); }
+
+    .modal-error {
+      font-size: 0.78rem;
+      color: #f87171;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    .modal-confirm {
+      background: var(--accent);
+      color: #1a1030;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+
+    .modal-confirm:hover { background: #b8e3f5; }
+    .modal-confirm:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+
+  <!-- ── User identification modal ──────────────────────────── -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <svg class="modal-logo" width="130" viewBox="0 0 130 95" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+        <g transform="matrix(1.02287,0,0,1.02287,-5.30805e-08,-1.02287)">
+          <path d="M106.634,45.954C96.686,47.526 91.462,44.41 90.159,36.181L87.248,17.772C85.939,9.485 89.946,4.907 99.894,3.335L114.339,1.052C115.818,0.818 116.572,1.367 116.806,2.846L117.939,10.008C118.172,11.487 117.624,12.241 116.144,12.475L104.244,14.355C101.756,14.746 100.782,15.872 101.099,17.886L103.326,31.974C103.634,33.927 104.901,34.638 107.388,34.244L119.287,32.364C120.768,32.131 121.52,32.679 121.756,34.158L122.871,41.202C123.104,42.681 122.556,43.436 121.076,43.669L106.634,45.954Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M15.976,35.288L20.416,34.586C22.489,34.258 22.834,32.991 22.582,31.392L22.265,29.379C22.011,27.782 21.291,26.681 19.22,27.009L14.78,27.712L15.976,35.288ZM8.586,61.454C7.106,61.687 6.352,61.139 6.116,59.66L0.052,21.301C-0.182,19.822 0.367,19.068 1.846,18.835L21.56,15.718C30.441,14.314 33.86,17.899 34.786,23.759L35.217,26.482C35.74,29.798 35.287,32.296 32.967,33.755C37.364,33.546 40.701,36.233 41.487,41.205L43.472,53.753C43.705,55.232 43.157,55.986 41.678,56.219L32.5,57.669C31.021,57.903 30.267,57.354 30.033,55.875L28.601,46.82C28.321,45.044 27.607,44.369 25.949,44.632L17.659,45.941L19.494,57.542C19.728,59.021 19.179,59.776 17.7,60.009L8.586,61.454Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M87.432,57.092C87.534,57.735 87.09,58.347 86.446,58.448L53.028,63.731C52.385,63.832 51.773,63.389 51.671,62.745L50.289,54.009C50.187,53.366 50.631,52.754 51.275,52.652L84.693,47.37C85.336,47.268 85.946,47.712 86.047,48.355L87.432,57.092Z" style="fill:rgb(110,110,180);fill-rule:nonzero;"/>
+          <path d="M63.961,32.153C60.23,32.742 56.727,30.196 56.138,26.466C55.549,22.735 58.096,19.233 61.825,18.645C65.556,18.056 69.059,20.602 69.647,24.332C70.239,28.063 67.692,31.564 63.961,32.153ZM59.664,4.977C48.381,6.76 40.683,17.349 42.466,28.629C44.249,39.909 54.84,47.606 66.122,45.823C77.405,44.04 85.103,33.451 83.32,22.171C81.537,10.891 70.946,3.192 59.664,4.977Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M11.54,92.766L8.86,75.844L10.335,75.611L24.342,88.46L23.568,88.583L21.239,73.885L23.003,73.606L25.683,90.528L24.209,90.762L10.228,77.905L11.003,77.783L13.332,92.481L11.54,92.766Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M29.252,74.075C28.896,74.132 28.579,74.057 28.3,73.855C28.019,73.652 27.854,73.38 27.799,73.042C27.745,72.705 27.822,72.399 28.026,72.127C28.23,71.855 28.511,71.692 28.864,71.636C29.22,71.579 29.535,71.645 29.814,71.833C30.09,72.021 30.258,72.283 30.31,72.621C30.366,72.977 30.296,73.291 30.101,73.57C29.906,73.849 29.623,74.016 29.252,74.075ZM30.835,89.711L28.824,77.017L30.541,76.746L32.553,89.439L30.835,89.711Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M36.216,93.79C35.699,93.872 35.194,93.881 34.696,93.82C34.2,93.758 33.767,93.616 33.4,93.391L33.799,91.992C34.383,92.345 35.079,92.458 35.885,92.331C36.562,92.225 37.05,91.94 37.349,91.48C37.648,91.02 37.734,90.395 37.609,89.604L35.45,75.969L37.167,75.697L39.326,89.333C39.512,90.508 39.342,91.498 38.817,92.3C38.293,93.102 37.426,93.598 36.216,93.79ZM35.876,73.026C35.52,73.083 35.203,73.008 34.925,72.807C34.644,72.603 34.478,72.331 34.424,71.993C34.369,71.656 34.446,71.35 34.65,71.078C34.854,70.807 35.135,70.641 35.491,70.587C35.844,70.53 36.161,70.596 36.44,70.784C36.717,70.972 36.882,71.235 36.936,71.572C36.993,71.928 36.923,72.243 36.728,72.521C36.531,72.8 36.248,72.967 35.876,73.026Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M57.797,72.306C58.828,72.143 59.759,72.197 60.586,72.471C61.415,72.745 62.106,73.251 62.661,73.989C63.216,74.727 63.59,75.708 63.784,76.934L64.953,84.306L63.236,84.578L62.094,77.373C61.884,76.034 61.403,75.074 60.658,74.49C59.913,73.905 58.959,73.704 57.799,73.889C56.929,74.028 56.204,74.329 55.624,74.791C55.044,75.253 54.636,75.855 54.399,76.596C54.161,77.337 54.118,78.188 54.272,79.156L55.33,85.828L53.612,86.1L52.471,78.895C52.26,77.556 51.775,76.596 51.023,76.014C50.269,75.432 49.313,75.233 48.153,75.416C47.298,75.552 46.578,75.851 45.989,76.315C45.402,76.78 44.99,77.382 44.75,78.123C44.512,78.863 44.469,79.715 44.623,80.682L45.681,87.355L43.964,87.627L41.952,74.934L43.597,74.673L44.14,78.107L43.778,77.545C44.02,76.564 44.53,75.747 45.309,75.085C46.089,74.426 47.067,74.003 48.243,73.815C49.485,73.618 50.588,73.762 51.558,74.243C52.527,74.725 53.239,75.568 53.692,76.766L52.974,76.607C53.182,75.518 53.705,74.58 54.548,73.794C55.393,73.013 56.476,72.517 57.797,72.306Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M75.03,82.836C73.71,83.045 72.504,82.952 71.417,82.553C70.329,82.155 69.426,81.513 68.707,80.628C67.989,79.742 67.529,78.671 67.33,77.414C67.131,76.157 67.224,75.001 67.611,73.948C67.998,72.895 68.619,72.016 69.473,71.312C70.327,70.607 71.344,70.161 72.52,69.975C73.714,69.787 74.815,69.889 75.828,70.281C76.84,70.675 77.69,71.316 78.376,72.206C79.063,73.097 79.507,74.179 79.709,75.452C79.722,75.534 79.731,75.618 79.736,75.708C79.743,75.799 79.752,75.892 79.768,75.989L68.716,77.738L68.513,76.456L78.644,74.852L78.048,75.468C77.903,74.548 77.577,73.763 77.067,73.108C76.557,72.453 75.934,71.978 75.193,71.683C74.453,71.389 73.639,71.309 72.751,71.45C71.881,71.588 71.131,71.914 70.502,72.426C69.872,72.938 69.421,73.588 69.149,74.376C68.877,75.162 68.814,76.023 68.963,76.959L69.006,77.224C69.16,78.191 69.507,79.008 70.051,79.672C70.595,80.338 71.281,80.816 72.112,81.106C72.944,81.396 73.85,81.461 74.833,81.307C75.608,81.185 76.306,80.934 76.931,80.553C77.556,80.173 78.066,79.663 78.46,79.022L79.604,79.98C79.147,80.746 78.524,81.375 77.733,81.862C76.949,82.349 76.048,82.676 75.03,82.836Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M89.251,79.964C88.041,80.154 86.913,80.066 85.862,79.695C84.81,79.323 83.934,78.716 83.229,77.869C82.525,77.022 82.078,75.994 81.886,74.786C81.693,73.577 81.802,72.467 82.212,71.452C82.622,70.437 83.27,69.595 84.153,68.927C85.039,68.258 86.086,67.828 87.296,67.635C88.424,67.457 89.477,67.529 90.454,67.853C91.43,68.177 92.257,68.757 92.934,69.59C93.612,70.426 94.056,71.502 94.264,72.825C94.473,74.145 94.384,75.31 93.999,76.311C93.612,77.314 93.007,78.127 92.18,78.755C91.355,79.384 90.379,79.785 89.251,79.964ZM89.178,78.415C90.114,78.268 90.911,77.939 91.575,77.427C92.239,76.918 92.724,76.279 93.032,75.511C93.34,74.743 93.421,73.901 93.277,72.981C93.132,72.061 92.794,71.289 92.264,70.662C91.734,70.036 91.077,69.581 90.288,69.303C89.5,69.022 88.639,68.956 87.703,69.106C86.784,69.25 85.991,69.579 85.32,70.091C84.65,70.603 84.162,71.237 83.861,71.993C83.56,72.752 83.483,73.59 83.628,74.51C83.773,75.43 84.108,76.206 84.629,76.843C85.15,77.479 85.81,77.937 86.607,78.216C87.402,78.494 88.259,78.56 89.178,78.415ZM90.404,85.21C89.244,85.394 88.104,85.4 86.988,85.23C85.871,85.061 84.93,84.714 84.172,84.189L84.835,82.746C85.515,83.183 86.319,83.491 87.248,83.665C88.177,83.84 89.133,83.851 90.116,83.695C91.729,83.439 92.853,82.877 93.492,82.007C94.131,81.138 94.325,79.912 94.074,78.333L93.571,75.167L93.469,72.954L92.955,70.804L92.345,66.961L93.99,66.7L95.755,77.844C96.102,80.037 95.821,81.729 94.912,82.922C94.001,84.116 92.499,84.877 90.404,85.21Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M106.199,77.901C104.878,78.109 103.673,78.016 102.585,77.618C101.498,77.221 100.594,76.578 99.876,75.692C99.158,74.807 98.698,73.735 98.499,72.478C98.299,71.221 98.392,70.066 98.779,69.013C99.167,67.959 99.788,67.081 100.642,66.376C101.496,65.672 102.513,65.225 103.689,65.04C104.883,64.849 105.984,64.954 106.996,65.346C108.009,65.74 108.859,66.381 109.545,67.271C110.231,68.161 110.676,69.244 110.877,70.517C110.891,70.598 110.9,70.682 110.904,70.773C110.911,70.863 110.92,70.956 110.936,71.051L99.887,72.8L99.683,71.518L109.815,69.914L109.219,70.53C109.074,69.611 108.745,68.825 108.238,68.17C107.728,67.515 107.105,67.04 106.364,66.743C105.623,66.449 104.81,66.369 103.922,66.51C103.052,66.648 102.302,66.974 101.672,67.486C101.043,67.998 100.592,68.648 100.32,69.436C100.048,70.222 99.985,71.083 100.134,72.018L100.177,72.283C100.331,73.251 100.678,74.068 101.222,74.732C101.765,75.398 102.452,75.876 103.283,76.166C104.115,76.456 105.021,76.521 106.004,76.367C106.779,76.245 107.477,75.994 108.102,75.613C108.727,75.233 109.237,74.723 109.631,74.082L110.775,75.04C110.318,75.806 109.695,76.433 108.904,76.922C108.118,77.414 107.214,77.74 106.199,77.901Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M119.842,62.482C120.872,62.319 121.81,62.374 122.655,62.643C123.5,62.915 124.207,63.418 124.778,64.154C125.349,64.89 125.732,65.871 125.924,67.094L127.093,74.467L125.376,74.739L124.234,67.534C124.021,66.195 123.528,65.237 122.75,64.659C121.973,64.082 120.981,63.887 119.771,64.077C118.867,64.22 118.111,64.525 117.499,64.994C116.887,65.463 116.455,66.068 116.201,66.811C115.947,67.554 115.895,68.408 116.049,69.375L117.107,76.048L115.39,76.32L113.378,63.626L115.023,63.366L115.573,66.847L115.204,66.236C115.46,65.255 115.993,64.43 116.795,63.767C117.603,63.105 118.618,62.675 119.842,62.482Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+        </g>
+      </svg>
+      <h2>SD_Testing_Agent</h2>
+      <p class="modal-subtitle">Identificeer jezelf om door te gaan</p>
+      <div class="modal-fields">
+        <div class="modal-field">
+          <label for="inputStudentnr">Studentnummer</label>
+          <input type="text" id="inputStudentnr" autofocus placeholder="bijv. 12345678" inputmode="numeric" />
+        </div>
+        <div class="modal-field">
+          <label for="inputNaam">Naam</label>
+          <input type="text" id="inputNaam" placeholder="Voor- en achternaam" />
+        </div>
+      </div>
+      <div class="modal-error" id="modalError"></div>
+      <button class="modal-confirm" id="modalConfirm">Start sessie</button>
+    </div>
+  </div>
+
+  <!-- ── App shell ───────────────────────────────────────────── -->
+  <div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <svg class="sidebar-logo" width="130" viewBox="0 0 130 95" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+        <g transform="matrix(1.02287,0,0,1.02287,-5.30805e-08,-1.02287)">
+          <path d="M106.634,45.954C96.686,47.526 91.462,44.41 90.159,36.181L87.248,17.772C85.939,9.485 89.946,4.907 99.894,3.335L114.339,1.052C115.818,0.818 116.572,1.367 116.806,2.846L117.939,10.008C118.172,11.487 117.624,12.241 116.144,12.475L104.244,14.355C101.756,14.746 100.782,15.872 101.099,17.886L103.326,31.974C103.634,33.927 104.901,34.638 107.388,34.244L119.287,32.364C120.768,32.131 121.52,32.679 121.756,34.158L122.871,41.202C123.104,42.681 122.556,43.436 121.076,43.669L106.634,45.954Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M15.976,35.288L20.416,34.586C22.489,34.258 22.834,32.991 22.582,31.392L22.265,29.379C22.011,27.782 21.291,26.681 19.22,27.009L14.78,27.712L15.976,35.288ZM8.586,61.454C7.106,61.687 6.352,61.139 6.116,59.66L0.052,21.301C-0.182,19.822 0.367,19.068 1.846,18.835L21.56,15.718C30.441,14.314 33.86,17.899 34.786,23.759L35.217,26.482C35.74,29.798 35.287,32.296 32.967,33.755C37.364,33.546 40.701,36.233 41.487,41.205L43.472,53.753C43.705,55.232 43.157,55.986 41.678,56.219L32.5,57.669C31.021,57.903 30.267,57.354 30.033,55.875L28.601,46.82C28.321,45.044 27.607,44.369 25.949,44.632L17.659,45.941L19.494,57.542C19.728,59.021 19.179,59.776 17.7,60.009L8.586,61.454Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M87.432,57.092C87.534,57.735 87.09,58.347 86.446,58.448L53.028,63.731C52.385,63.832 51.773,63.389 51.671,62.745L50.289,54.009C50.187,53.366 50.631,52.754 51.275,52.652L84.693,47.37C85.336,47.268 85.946,47.712 86.047,48.355L87.432,57.092Z" style="fill:rgb(110,110,180);fill-rule:nonzero;"/>
+          <path d="M63.961,32.153C60.23,32.742 56.727,30.196 56.138,26.466C55.549,22.735 58.096,19.233 61.825,18.645C65.556,18.056 69.059,20.602 69.647,24.332C70.239,28.063 67.692,31.564 63.961,32.153ZM59.664,4.977C48.381,6.76 40.683,17.349 42.466,28.629C44.249,39.909 54.84,47.606 66.122,45.823C77.405,44.04 85.103,33.451 83.32,22.171C81.537,10.891 70.946,3.192 59.664,4.977Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M11.54,92.766L8.86,75.844L10.335,75.611L24.342,88.46L23.568,88.583L21.239,73.885L23.003,73.606L25.683,90.528L24.209,90.762L10.228,77.905L11.003,77.783L13.332,92.481L11.54,92.766Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M29.252,74.075C28.896,74.132 28.579,74.057 28.3,73.855C28.019,73.652 27.854,73.38 27.799,73.042C27.745,72.705 27.822,72.399 28.026,72.127C28.23,71.855 28.511,71.692 28.864,71.636C29.22,71.579 29.535,71.645 29.814,71.833C30.09,72.021 30.258,72.283 30.31,72.621C30.366,72.977 30.296,73.291 30.101,73.57C29.906,73.849 29.623,74.016 29.252,74.075ZM30.835,89.711L28.824,77.017L30.541,76.746L32.553,89.439L30.835,89.711Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M36.216,93.79C35.699,93.872 35.194,93.881 34.696,93.82C34.2,93.758 33.767,93.616 33.4,93.391L33.799,91.992C34.383,92.345 35.079,92.458 35.885,92.331C36.562,92.225 37.05,91.94 37.349,91.48C37.648,91.02 37.734,90.395 37.609,89.604L35.45,75.969L37.167,75.697L39.326,89.333C39.512,90.508 39.342,91.498 38.817,92.3C38.293,93.102 37.426,93.598 36.216,93.79ZM35.876,73.026C35.52,73.083 35.203,73.008 34.925,72.807C34.644,72.603 34.478,72.331 34.424,71.993C34.369,71.656 34.446,71.35 34.65,71.078C34.854,70.807 35.135,70.641 35.491,70.587C35.844,70.53 36.161,70.596 36.44,70.784C36.717,70.972 36.882,71.235 36.936,71.572C36.993,71.928 36.923,72.243 36.728,72.521C36.531,72.8 36.248,72.967 35.876,73.026Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M57.797,72.306C58.828,72.143 59.759,72.197 60.586,72.471C61.415,72.745 62.106,73.251 62.661,73.989C63.216,74.727 63.59,75.708 63.784,76.934L64.953,84.306L63.236,84.578L62.094,77.373C61.884,76.034 61.403,75.074 60.658,74.49C59.913,73.905 58.959,73.704 57.799,73.889C56.929,74.028 56.204,74.329 55.624,74.791C55.044,75.253 54.636,75.855 54.399,76.596C54.161,77.337 54.118,78.188 54.272,79.156L55.33,85.828L53.612,86.1L52.471,78.895C52.26,77.556 51.775,76.596 51.023,76.014C50.269,75.432 49.313,75.233 48.153,75.416C47.298,75.552 46.578,75.851 45.989,76.315C45.402,76.78 44.99,77.382 44.75,78.123C44.512,78.863 44.469,79.715 44.623,80.682L45.681,87.355L43.964,87.627L41.952,74.934L43.597,74.673L44.14,78.107L43.778,77.545C44.02,76.564 44.53,75.747 45.309,75.085C46.089,74.426 47.067,74.003 48.243,73.815C49.485,73.618 50.588,73.762 51.558,74.243C52.527,74.725 53.239,75.568 53.692,76.766L52.974,76.607C53.182,75.518 53.705,74.58 54.548,73.794C55.393,73.013 56.476,72.517 57.797,72.306Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M75.03,82.836C73.71,83.045 72.504,82.952 71.417,82.553C70.329,82.155 69.426,81.513 68.707,80.628C67.989,79.742 67.529,78.671 67.33,77.414C67.131,76.157 67.224,75.001 67.611,73.948C67.998,72.895 68.619,72.016 69.473,71.312C70.327,70.607 71.344,70.161 72.52,69.975C73.714,69.787 74.815,69.889 75.828,70.281C76.84,70.675 77.69,71.316 78.376,72.206C79.063,73.097 79.507,74.179 79.709,75.452C79.722,75.534 79.731,75.618 79.736,75.708C79.743,75.799 79.752,75.892 79.768,75.989L68.716,77.738L68.513,76.456L78.644,74.852L78.048,75.468C77.903,74.548 77.577,73.763 77.067,73.108C76.557,72.453 75.934,71.978 75.193,71.683C74.453,71.389 73.639,71.309 72.751,71.45C71.881,71.588 71.131,71.914 70.502,72.426C69.872,72.938 69.421,73.588 69.149,74.376C68.877,75.162 68.814,76.023 68.963,76.959L69.006,77.224C69.16,78.191 69.507,79.008 70.051,79.672C70.595,80.338 71.281,80.816 72.112,81.106C72.944,81.396 73.85,81.461 74.833,81.307C75.608,81.185 76.306,80.934 76.931,80.553C77.556,80.173 78.066,79.663 78.46,79.022L79.604,79.98C79.147,80.746 78.524,81.375 77.733,81.862C76.949,82.349 76.048,82.676 75.03,82.836Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M89.251,79.964C88.041,80.154 86.913,80.066 85.862,79.695C84.81,79.323 83.934,78.716 83.229,77.869C82.525,77.022 82.078,75.994 81.886,74.786C81.693,73.577 81.802,72.467 82.212,71.452C82.622,70.437 83.27,69.595 84.153,68.927C85.039,68.258 86.086,67.828 87.296,67.635C88.424,67.457 89.477,67.529 90.454,67.853C91.43,68.177 92.257,68.757 92.934,69.59C93.612,70.426 94.056,71.502 94.264,72.825C94.473,74.145 94.384,75.31 93.999,76.311C93.612,77.314 93.007,78.127 92.18,78.755C91.355,79.384 90.379,79.785 89.251,79.964ZM89.178,78.415C90.114,78.268 90.911,77.939 91.575,77.427C92.239,76.918 92.724,76.279 93.032,75.511C93.34,74.743 93.421,73.901 93.277,72.981C93.132,72.061 92.794,71.289 92.264,70.662C91.734,70.036 91.077,69.581 90.288,69.303C89.5,69.022 88.639,68.956 87.703,69.106C86.784,69.25 85.991,69.579 85.32,70.091C84.65,70.603 84.162,71.237 83.861,71.993C83.56,72.752 83.483,73.59 83.628,74.51C83.773,75.43 84.108,76.206 84.629,76.843C85.15,77.479 85.81,77.937 86.607,78.216C87.402,78.494 88.259,78.56 89.178,78.415ZM90.404,85.21C89.244,85.394 88.104,85.4 86.988,85.23C85.871,85.061 84.93,84.714 84.172,84.189L84.835,82.746C85.515,83.183 86.319,83.491 87.248,83.665C88.177,83.84 89.133,83.851 90.116,83.695C91.729,83.439 92.853,82.877 93.492,82.007C94.131,81.138 94.325,79.912 94.074,78.333L93.571,75.167L93.469,72.954L92.955,70.804L92.345,66.961L93.99,66.7L95.755,77.844C96.102,80.037 95.821,81.729 94.912,82.922C94.001,84.116 92.499,84.877 90.404,85.21Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M106.199,77.901C104.878,78.109 103.673,78.016 102.585,77.618C101.498,77.221 100.594,76.578 99.876,75.692C99.158,74.807 98.698,73.735 98.499,72.478C98.299,71.221 98.392,70.066 98.779,69.013C99.167,67.959 99.788,67.081 100.642,66.376C101.496,65.672 102.513,65.225 103.689,65.04C104.883,64.849 105.984,64.954 106.996,65.346C108.009,65.74 108.859,66.381 109.545,67.271C110.231,68.161 110.676,69.244 110.877,70.517C110.891,70.598 110.9,70.682 110.904,70.773C110.911,70.863 110.92,70.956 110.936,71.051L99.887,72.8L99.683,71.518L109.815,69.914L109.219,70.53C109.074,69.611 108.745,68.825 108.238,68.17C107.728,67.515 107.105,67.04 106.364,66.743C105.623,66.449 104.81,66.369 103.922,66.51C103.052,66.648 102.302,66.974 101.672,67.486C101.043,67.998 100.592,68.648 100.32,69.436C100.048,70.222 99.985,71.083 100.134,72.018L100.177,72.283C100.331,73.251 100.678,74.068 101.222,74.732C101.765,75.398 102.452,75.876 103.283,76.166C104.115,76.456 105.021,76.521 106.004,76.367C106.779,76.245 107.477,75.994 108.102,75.613C108.727,75.233 109.237,74.723 109.631,74.082L110.775,75.04C110.318,75.806 109.695,76.433 108.904,76.922C108.118,77.414 107.214,77.74 106.199,77.901Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+          <path d="M119.842,62.482C120.872,62.319 121.81,62.374 122.655,62.643C123.5,62.915 124.207,63.418 124.778,64.154C125.349,64.89 125.732,65.871 125.924,67.094L127.093,74.467L125.376,74.739L124.234,67.534C124.021,66.195 123.528,65.237 122.75,64.659C121.973,64.082 120.981,63.887 119.771,64.077C118.867,64.22 118.111,64.525 117.499,64.994C116.887,65.463 116.455,66.068 116.201,66.811C115.947,67.554 115.895,68.408 116.049,69.375L117.107,76.048L115.39,76.32L113.378,63.626L115.023,63.366L115.573,66.847L115.204,66.236C115.46,65.255 115.993,64.43 116.795,63.767C117.603,63.105 118.618,62.675 119.842,62.482Z" style="fill:#FFFFFF;fill-rule:nonzero;"/>
+        </g>
+      </svg>
+      <div class="sidebar-user" id="sidebarUser" style="display:none;">
+        <div class="label">Studentnummer</div>
+        <div class="value" id="displayStudentnr"></div>
+        <div class="label">Naam</div>
+        <div class="value" id="displayNaam"></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-footer">
+        Model<br><strong style="color:var(--text);">qwen2.5-coder<br>1.5b-instruct</strong>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="chat-header">
+        <div class="status-dot"></div>
+        <h1>SD_Testing_Agent</h1>
+      </div>
+
+      <div class="messages" id="messages">
+      </div>
+
+      <div class="loading" id="loading">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div class="input-area">
+        <textarea
+          id="userInput"
+          placeholder="Stel een vraag over software testing..."
+          rows="1"
+        ></textarea>
+        <button class="send-btn" id="sendBtn">Verstuur</button>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    // ── Copy code to clipboard ───────────────────────────────────────────
+    const codeStore = new Map();
+    let codeStoreId = 0;
+
+    function copyCode(btn, id) {
+      const code = codeStore.get(id) || '';
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'copied!';
+        btn.style.color = 'var(--accent)';
+        setTimeout(function() {
+          btn.textContent = 'copy';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(function() {
+        btn.textContent = 'error';
+        setTimeout(function() { btn.textContent = 'copy'; }, 2000);
+      });
+    }
+
+
+    function copyUserMessage(btn) {
+      const text = btn.dataset.text || '';
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'copied!';
+        setTimeout(function() {
+          btn.textContent = 'copy';
+        }, 2000);
+      }).catch(function() {
+        btn.textContent = 'error';
+        setTimeout(function() { btn.textContent = 'copy'; }, 2000);
+      });
+    }
+
+    // ── HTML escape (veiligheid) ──────────────────────────────────────
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── Inline code parser ──────────────────────────────────────────────
+    function parseInline(text) {
+      const TICK = String.fromCharCode(96);
+      let result = "";
+      let remaining = text;
+      while (remaining.length > 0) {
+        const tickIdx = remaining.indexOf(TICK);
+        if (tickIdx === -1) {
+          result += escapeHtml(remaining).replace(/\n/g, "<br>");
+          break;
+        }
+        if (tickIdx > 0) {
+          result += escapeHtml(remaining.slice(0, tickIdx)).replace(/\n/g, "<br>");
+        }
+        const closeIdx = remaining.indexOf(TICK, tickIdx + 1);
+        if (closeIdx === -1) {
+          result += escapeHtml(remaining.slice(tickIdx)).replace(/\n/g, "<br>");
+          break;
+        }
+        const inlineCode = remaining.slice(tickIdx + 1, closeIdx);
+        result += "<code>" + escapeHtml(inlineCode) + "</code>";
+        remaining = remaining.slice(closeIdx + 1);
+      }
+      return result.trim() ? "<p>" + result + "</p>" : result;
+    }
+
+    // ── Message parser (codeblokken + inline code) ───────────────────
+    function parseMessage(text) {
+      try {
+        const TRIPLE = String.fromCharCode(96,96,96);
+        let html = "";
+        let remaining = text;
+        while (remaining.length > 0) {
+          const tripleIdx = remaining.indexOf(TRIPLE);
+          if (tripleIdx === -1) {
+            html += parseInline(remaining);
+            break;
+          }
+          if (tripleIdx > 0) {
+            html += parseInline(remaining.slice(0, tripleIdx));
+          }
+          const closeIdx = remaining.indexOf(TRIPLE, tripleIdx + 3);
+          if (closeIdx === -1) {
+            html += parseInline(remaining.slice(tripleIdx));
+            break;
+          }
+          const inner = remaining.slice(tripleIdx + 3, closeIdx);
+          const nlIdx = inner.indexOf(String.fromCharCode(10));
+          const lang = nlIdx !== -1 ? inner.slice(0, nlIdx) : "";
+          const code = nlIdx !== -1 ? inner.slice(nlIdx + 1) : inner;
+          const labelHtml = lang.trim() ? "<span class=\"code-lang-label\">" + escapeHtml(lang.trim()) + "</span>" : "";
+          const storeId = codeStoreId++;
+          codeStore.set(storeId, code);
+          const copyBtn = "<button class=\"copy-btn\" onclick=\"copyCode(this, " + storeId + ")\" >copy</button>";
+          html += "<div class=\"code-block-wrapper\">" + copyBtn + labelHtml + "<pre><code>" + escapeHtml(code) + "</code></pre></div>";
+          remaining = remaining.slice(closeIdx + 3);
+        }
+        return html;
+      } catch(e) {
+        return escapeHtml(text);
+      }
+    }
+    // ── User identification ──────────────────────────────────────
+    const overlay      = document.getElementById('modalOverlay');
+    const inputNr      = document.getElementById('inputStudentnr');
+    const inputNaam    = document.getElementById('inputNaam');
+    const modalError   = document.getElementById('modalError');
+    const modalConfirm = document.getElementById('modalConfirm');
+    const sidebarUser  = document.getElementById('sidebarUser');
+    const displayNr    = document.getElementById('displayStudentnr');
+    const displayNaam  = document.getElementById('displayNaam');
+
+    function applyUser(nr, naam) {
+      displayNr.textContent   = nr;
+      displayNaam.textContent = naam;
+      sidebarUser.style.display = 'block';
+      overlay.classList.add('hidden');
+      document.getElementById('userInput').focus();
+    }
+
+    // Restore from sessionStorage if present
+    const savedNr   = sessionStorage.getItem('studentnr');
+    const savedNaam = sessionStorage.getItem('naam');
+    if (savedNr && savedNaam) {
+      applyUser(savedNr, savedNaam);
+      document.getElementById('userInput').focus();
+    }
+
+    modalConfirm.addEventListener('click', () => {
+      const nr   = inputNr.value.trim();
+      const naam = inputNaam.value.trim();
+      modalError.textContent = '';
+
+      if (!nr || !naam) {
+        modalError.textContent = 'Vul beide velden in.';
+        return;
+      }
+      if (!/^\d+$/.test(nr)) {
+        modalError.textContent = 'Studentnummer mag alleen cijfers bevatten.';
+        return;
+      }
+
+      sessionStorage.setItem('studentnr', nr);
+      sessionStorage.setItem('naam', naam);
+      applyUser(nr, naam);
+    });
+
+    // Prevent closing modal via Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') e.preventDefault();
+    });
+
+    // ── Chat logic ───────────────────────────────────────────────
+    const messagesEl = document.getElementById('messages');
+    const userInput  = document.getElementById('userInput');
+    const sendBtn    = document.getElementById('sendBtn');
+    const loadingEl  = document.getElementById('loading');
+
+    let chatHistory = [];
+    let isLoading   = false;
+
+    // Welkomstbericht via addMessage zodat parseMessage beschikbaar is
+    addMessage('agent', 'Hello! I am AI Code Testing Tutort. Ask me about test cases, test strategy, test automation or code quality.');
+
+
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function addMessage(role, content) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `message ${role === 'user' ? 'user' : 'agent'}`;
+
+      const label = document.createElement('div');
+      label.className = 'message-role';
+      label.textContent = role === 'user' ? 'Jij' : 'Agent';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+      if (role === 'user') {
+        bubble.textContent = content;
+      } else {
+        try {
+          bubble.innerHTML = parseMessage(content);
+        } catch(e) {
+          bubble.textContent = content;
+        }
+      }
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(bubble);
+
+      // Copy button for user messages
+      if (role === 'user') {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'user-copy-btn';
+        copyBtn.textContent = 'copy';
+        copyBtn.dataset.text = content;
+        copyBtn.setAttribute('onclick', 'copyUserMessage(this)');
+        wrapper.appendChild(copyBtn);
+      }
+
+      messagesEl.appendChild(wrapper);
+      scrollToBottom();
+      return bubble;
+    }
+
+    // Auto-resize textarea
+    userInput.addEventListener('input', () => {
+      userInput.style.height = 'auto';
+      userInput.style.height = Math.min(userInput.scrollHeight, 160) + 'px';
+    });
+
+    // Send on Enter (Shift+Enter for newline)
+    userInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!isLoading) sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', () => { if (!isLoading) sendMessage(); });
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      userInput.value = '';
+      userInput.style.height = 'auto';
+      isLoading = true;
+      sendBtn.disabled = true;
+
+      addMessage('user', text);
+      chatHistory.push({ role: 'user', content: text });
+
+      // Show loading
+      messagesEl.appendChild(loadingEl);
+      loadingEl.classList.add('visible');
+      scrollToBottom();
+
+      // Create agent bubble (hidden until first token)
+      const agentBubble = addMessage('agent', '');
+      agentBubble.textContent = '';
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: chatHistory })
+        });
+
+        loadingEl.classList.remove('visible');
+
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+
+          for (const line of lines) {
+            const data = line.slice(6);
+            if (data === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(data);
+              const token  = parsed.token || '';
+              fullResponse += token;
+              try {
+                agentBubble.innerHTML = parseMessage(fullResponse);
+              } catch(e) {
+                agentBubble.textContent = fullResponse;
+              }
+              scrollToBottom();
+            } catch {}
+          }
+        }
+
+        chatHistory.push({ role: 'assistant', content: fullResponse });
+
+      } catch (err) {
+        loadingEl.classList.remove('visible');
+        agentBubble.textContent = 'Fout: ' + err.message;
+      }
+
+      isLoading = false;
+      sendBtn.disabled = false;
+      userInput.focus();
+    }
+  </script>
+</body>
+</html>

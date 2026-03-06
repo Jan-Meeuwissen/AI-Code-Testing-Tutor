@@ -1,0 +1,47 @@
+services:
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - agent_network
+    # Start ollama, wait for it to be ready, then pull the model if not already present
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull qwen2.5-coder:1.5b-instruct && wait"]
+    healthcheck:
+      # Returns exit code 0 (healthy) if model is found, exit code 1 (unhealthy) if not
+      test: ["CMD", "/bin/sh", "-c", "ollama list | grep -q qwen2.5-coder && exit 0 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  sd_testing_agent:
+    build: .
+    container_name: sd_testing_agent
+    ports:
+      - "3333:3000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - ROLE_CONFIG_PATH=./config/role.json
+    volumes:
+      - ./config:/app/config
+    # Agent will not start until ollama passes its healthcheck (model is ready)
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - agent_network
+
+networks:
+  agent_network:
+    driver: bridge
+
+volumes:
+  ollama_data:
+
