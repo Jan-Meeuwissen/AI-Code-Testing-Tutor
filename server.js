@@ -165,6 +165,12 @@ app.post('/api/chat', async (req, res) => {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', model: MODEL }));
 
+app.get('/api/config-hash', (_req, res) => {
+  const crypto = require('crypto');
+  const hash = crypto.createHash('md5').update(systemPrompt).digest('hex').slice(0, 8);
+  res.json({ hash });
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 AI Code Testing Tutor running on port ${PORT}`);
 });

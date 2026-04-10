@@ -98,6 +98,32 @@
       font-size: 0.7rem;
       color: var(--text-muted);
       line-height: 1.5;
+      width: 100%;
+    }
+
+    .download-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 8px 10px;
+      background: transparent;
+      border: 1px solid var(--accent-border);
+      border-radius: var(--radius);
+      color: var(--accent);
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.15s, border-color 0.15s;
+      text-align: center;
+    }
+    .download-btn:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+    }
+    .download-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
     }
 
     /* ── Main chat area ────────────────────────────────────────── */
@@ -518,19 +544,19 @@
         </g>
       </svg>
       <h2>AI Code Testing Tutor</h2>
-      <p class="modal-subtitle">Identificeer jezelf om door te gaan</p>
+      <p class="modal-subtitle">Identify yourself to continue</p>
       <div class="modal-fields">
         <div class="modal-field">
-          <label for="inputStudentnr">Studentnummer</label>
-          <input type="text" id="inputStudentnr" autofocus placeholder="bijv. 12345678" inputmode="numeric" />
+          <label for="inputStudentnr">Student number</label>
+          <input type="text" id="inputStudentnr" autofocus placeholder="e.g. 12345678" inputmode="numeric" />
         </div>
         <div class="modal-field">
-          <label for="inputNaam">Naam</label>
-          <input type="text" id="inputNaam" placeholder="Voor- en achternaam" />
+          <label for="inputNaam">Name</label>
+          <input type="text" id="inputNaam" placeholder="First and last name" />
         </div>
       </div>
       <div class="modal-error" id="modalError"></div>
-      <button class="modal-confirm" id="modalConfirm">Start sessie</button>
+      <button class="modal-confirm" id="modalConfirm">Start session</button>
     </div>
   </div>
 
@@ -556,14 +582,15 @@
         </g>
       </svg>
       <div class="sidebar-user" id="sidebarUser" style="display:none;">
-        <div class="label">Studentnummer</div>
+        <div class="label">Student number</div>
         <div class="value" id="displayStudentnr"></div>
-        <div class="label">Naam</div>
+        <div class="label">Name</div>
         <div class="value" id="displayNaam"></div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-footer">
         Model<br><strong style="color:var(--text);">qwen2.5-coder<br>1.5b-instruct</strong>
+        <button class="download-btn" id="downloadBtn" onclick="downloadLog()" disabled>&#8659; Download prompt log</button>
       </div>
     </aside>
 
@@ -584,10 +611,10 @@
       <div class="input-area">
         <textarea
           id="userInput"
-          placeholder="Stel een vraag over software testing..."
+          placeholder="Ask a question about software testing..."
           rows="1"
         ></textarea>
-        <button class="send-btn" id="sendBtn">Verstuur</button>
+        <button class="send-btn" id="sendBtn">Send</button>
       </div>
     </main>
 
@@ -726,11 +753,11 @@
       modalError.textContent = '';
 
       if (!nr || !naam) {
-        modalError.textContent = 'Vul beide velden in.';
+        modalError.textContent = 'Please fill in both fields.';
         return;
       }
       if (!/^\d+$/.test(nr)) {
-        modalError.textContent = 'Studentnummer mag alleen cijfers bevatten.';
+        modalError.textContent = 'Student number may only contain digits.';
         return;
       }
 
@@ -752,6 +779,10 @@
 
     let chatHistory = [];
     let isLoading   = false;
+    let promptLog   = [];
+    // Hash van de systeemprompt ophalen voor in de exportfooter
+    let configHash = '--------';
+    fetch('/api/config-hash').then(r => r.json()).then(d => { configHash = d.hash; }).catch(() => {});
 
     // Welkomstbericht via addMessage zodat parseMessage beschikbaar is
     addMessage('agent', 'Hello! I am AI Code Testing Tutor. Ask me about test cases, test strategy, test automation or code quality.');
@@ -767,7 +798,7 @@
 
       const label = document.createElement('div');
       label.className = 'message-role';
-      label.textContent = role === 'user' ? 'Jij' : 'Agent';
+      label.textContent = role === 'user' ? 'You' : 'Agent';
 
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
@@ -877,14 +908,154 @@
 
         chatHistory.push({ role: 'assistant', content: fullResponse });
 
+        const ts = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        promptLog.push({ ts, question: text, answer: fullResponse });
+        document.getElementById('downloadBtn').disabled = false;
+
       } catch (err) {
         loadingEl.classList.remove('visible');
-        agentBubble.textContent = 'Fout: ' + err.message;
+        agentBubble.textContent = 'Error: ' + err.message;
       }
 
       isLoading = false;
       sendBtn.disabled = false;
       userInput.focus();
+    }
+    // ── Download prompt log ──────────────────────────────────────
+    function escLog(t) {
+      return String(t)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+    }
+
+    function buildAnswerHtml(text) {
+      // Split op ```...``` blokken
+      const TRIPLE = '\x60\x60\x60';
+      const re = new RegExp(TRIPLE + '(?:\\w*\\n)?([\\s\\S]*?)' + TRIPLE, 'g');
+      let result = '';
+      let last = 0;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        // tekst vóór het blok
+        if (m.index > last) {
+          result += escLog(text.slice(last, m.index))
+            .replace(/\x60([^\x60]+)\x60/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+        }
+        result += '<pre>' + escLog(m[1]) + '</pre>';
+        last = re.lastIndex;
+      }
+      // resterende tekst
+      if (last < text.length) {
+        result += escLog(text.slice(last))
+          .replace(/\x60([^\x60]+)\x60/g, '<code>$1</code>')
+          .replace(/\n/g, '<br>');
+      }
+      return result;
+    }
+
+    function downloadLog() {
+      const nr   = sessionStorage.getItem('studentnr') || '—';
+      const naam = sessionStorage.getItem('naam')      || '—';
+      const now  = new Date();
+      const exportDate = now.toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })
+                       + ' ' + now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+      const firstQ = promptLog.length ? escLog(promptLog[0].question) : '';
+      const firstA = promptLog.length ? buildAnswerHtml(promptLog[0].answer) : '<span class="empty">No entries.</span>';
+
+      const listItems = promptLog.map((entry, i) =>
+        '<li class="log-item' + (i === 0 ? ' active' : '') + '" onclick="selectEntry(' + i + ',this)">'
+        + '<div class="ts">' + escLog(entry.ts) + '</div>'
+        + '<div class="preview">' + escLog(entry.question) + '</div>'
+        + '</li>'
+      ).join('');
+
+      const entriesJson = JSON.stringify(promptLog)
+        .replace(/<\/script>/gi, '<\\/script>');
+
+      const html = '<!DOCTYPE html>\n'
+        + '<html lang="nl">\n<head>\n'
+        + '<meta charset="UTF-8"/>\n'
+        + '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>\n'
+        + '<title>Prompt log \u2014 ' + escLog(naam) + '</title>\n'
+        + '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">\n'
+        + '<style>\n'
+        + ':root{--bg:#3f2e56;--bg-light:#4e3a68;--accent:#98d3eb;--accent-dim:rgba(152,211,235,0.15);--accent-border:rgba(152,211,235,0.35);--text:#b0b0d8;--text-bright:#d4d4ee;--text-muted:#7878a8;--gold:#eead29;--radius:10px;}\n'
+        + '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}\n'
+        + 'html,body{height:100%;font-family:\'Roboto\',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}\n'
+        + '.app{display:flex;height:100vh;}\n'
+        + '.sidebar{width:240px;min-width:240px;background:rgba(0,0,0,0.2);border-right:1px solid var(--accent-border);display:flex;flex-direction:column;}\n'
+        + '.s-student{padding:16px 18px 12px;border-bottom:1px solid var(--accent-border);}\n'
+        + '.s-student .lbl{font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;}\n'
+        + '.s-student .name{font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:0.9rem;color:var(--gold);}\n'
+        + '.s-student .nr{font-size:0.75rem;color:var(--text-muted);margin-top:2px;}\n'
+        + '.list-hdr{padding:8px 18px;font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--accent-border);}\n'
+        + '.log-list{list-style:none;overflow-y:auto;flex:1;}\n'
+        + '.log-list::-webkit-scrollbar{width:4px;}\n'
+        + '.log-list::-webkit-scrollbar-thumb{background:var(--accent-border);border-radius:2px;}\n'
+        + '.log-item{padding:9px 18px;cursor:pointer;border-bottom:1px solid var(--accent-border);transition:background 0.1s;}\n'
+        + '.log-item:hover{background:var(--accent-dim);}\n'
+        + '.log-item.active{background:var(--accent-dim);border-left:3px solid var(--accent);padding-left:15px;}\n'
+        + '.log-item .ts{font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;}\n'
+        + '.log-item .preview{font-size:0.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n'
+        + '.log-item.active .preview{color:var(--accent);}\n'
+        + '.s-footer{padding:12px 18px;border-top:1px solid var(--accent-border);margin-top:auto;}\n'
+        + '.s-footer .flbl{font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;}\n'
+        + '.s-footer .fdate{font-size:0.75rem;color:var(--text-muted);}\n'
+        + '.detail{flex:1;display:flex;flex-direction:column;overflow:hidden;}\n'
+        + '.d-hdr{padding:10px 22px;font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--accent-border);background:rgba(0,0,0,0.1);}\n'
+        + '.d-q{padding:14px 22px;border-bottom:1px solid var(--accent-border);background:rgba(0,0,0,0.1);}\n'
+        + '.d-q .qlbl{font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;}\n'
+        + '.d-q .qtext{font-size:0.9rem;color:var(--text-bright);font-weight:500;line-height:1.5;}\n'
+        + '.d-a{flex:1;overflow-y:auto;padding:16px 22px;font-size:0.88rem;color:var(--text);line-height:1.7;}\n'
+        + '.d-a::-webkit-scrollbar{width:4px;}\n'
+        + '.d-a::-webkit-scrollbar-thumb{background:var(--accent-border);border-radius:2px;}\n'
+        + 'pre{background:var(--bg-light);border:1px solid var(--accent-border);border-radius:var(--radius);padding:10px 14px;font-size:0.8rem;overflow-x:auto;margin:10px 0;color:var(--accent);font-family:monospace;white-space:pre;}\n'
+        + 'code{background:var(--bg-light);padding:1px 5px;border-radius:4px;font-size:0.85em;color:var(--accent);font-family:monospace;}\n'
+        + '.empty{color:var(--text-muted);font-size:0.88rem;}\n'
+        + '</style>\n</head>\n<body>\n'
+        + '<div class="app">\n'
+        + '  <aside class="sidebar">\n'
+        + '    <div class="s-student"><div class="lbl">Student</div><div class="name">' + escLog(naam) + '</div><div class="nr">Nr: ' + escLog(nr) + '</div></div>\n'
+        + '    <div class="list-hdr">Prompt log (' + promptLog.length + ')</div>\n'
+        + '    <ul class="log-list">' + listItems + '</ul>\n'
+        + '    <div class="s-footer"><div class="flbl">Exported on</div><div class="fdate">' + exportDate + '</div>'
+        + '<div class="fdate" style="margin-top:4px;color:var(--text-muted);">version: <code style="font-family:monospace;font-size:0.7rem;color:var(--accent);">' + configHash + '</code></div></div>\n'
+        + '  </aside>\n'
+        + '  <div class="detail">\n'
+        + '    <div class="d-hdr">Answer</div>\n'
+        + '    <div class="d-q"><div class="qlbl">Question</div><div class="qtext" id="dQ">' + firstQ + '</div></div>\n'
+        + '    <div class="d-a" id="dA">' + firstA + '</div>\n'
+        + '  </div>\n'
+        + '</div>\n'
+        + '<script>\n'
+        + 'var E=' + entriesJson + ';\n'
+        + 'function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}\n'
+        + 'function fmt(text){'
+        +   'var T="\x60\x60\x60",re=new RegExp(T+"(?:\\\\w*\\\\n)?([\\\\s\\\\S]*?)"+T,"g"),r="",l=0,m;'
+        +   'while((m=re.exec(text))!==null){'
+        +     'if(m.index>l){r+=esc(text.slice(l,m.index)).replace(/\x60([^\x60]+)\x60/g,"<code>$1<\/code>").replace(/\\n/g,"<br>");}'
+        +     'r+="<pre>"+esc(m[1])+"<\/pre>";l=re.lastIndex;}'
+        +   'if(l<text.length){r+=esc(text.slice(l)).replace(/\x60([^\x60]+)\x60/g,"<code>$1<\/code>").replace(/\\n/g,"<br>");}'
+        +   'return r;}\n'
+        + 'function selectEntry(i,el){'
+        +   'document.querySelectorAll(".log-item").forEach(function(x){x.classList.remove("active");});'
+        +   'el.classList.add("active");'
+        +   'document.getElementById("dQ").textContent=E[i].question;'
+        +   'document.getElementById("dA").innerHTML=fmt(E[i].answer);}\n'
+        + '<\/script>\n'
+        + '</body>\n</html>';
+
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'promptlog_' + nr + '_' + now.toISOString().slice(0,10) + '.html';
+      a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>

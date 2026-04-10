@@ -76,6 +76,33 @@ Bij **volgende starts** (model al gedownload) gebruik je:
 docker-compose up
 ```
 
+> **Let op:** `docker-compose up` hergebruikt de bestaande image en pikt wijzigingen in `index.html`, `server.js` of `config/` **niet** automatisch op. Zie [Upgraden](#upgraden) hieronder.
+
+---
+
+## Upgraden
+
+Na het bijwerken van bestanden (zoals `index.html`, `server.js` of `config/role.json`) moet de image opnieuw worden gebouwd. Dankzij `pull_policy: build` in `docker-compose.yml` doet het volgende commando dat automatisch:
+
+```bash
+docker-compose up --build
+```
+
+Wil je zeker zijn dat er geen oude lagen worden hergebruikt (bij hardnekkige cacheproblemen), gebruik dan:
+
+```bash
+docker-compose build --no-cache
+docker-compose up
+```
+
+Of verwijder de oude image handmatig en start opnieuw:
+
+```bash
+docker-compose down
+docker rmi sd_testing_agent
+docker-compose up
+```
+
 ---
 
 ## Stoppen

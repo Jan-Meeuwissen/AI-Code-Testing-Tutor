@@ -22,6 +22,7 @@ services:
 
   sd_testing_agent:
     build: .
+    pull_policy: build
     container_name: sd_testing_agent
     ports:
       - "3333:3000"
