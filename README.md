@@ -76,26 +76,18 @@ Bij **volgende starts** (model al gedownload) gebruik je:
 docker-compose up
 ```
 
-> **Let op:** `docker-compose up` hergebruikt de bestaande image en pikt wijzigingen in `index.html`, `server.js` of `config/` **niet** automatisch op. Zie [Upgraden](#upgraden) hieronder.
-
 ---
 
 ## Upgraden
 
-Na het bijwerken van bestanden (zoals `index.html`, `server.js` of `config/role.json`) moet de image opnieuw worden gebouwd. Dankzij `pull_policy: build` in `docker-compose.yml` doet het volgende commando dat automatisch:
+Na het bijwerken van bestanden (zoals `index.html`, `server.js` of `config/role.json`) moet de image opnieuw worden gebouwd. Dankzij `pull_policy: build` in `docker-compose.yml` gaat dat automatisch als je de `--build` optie gebruikt.
 
 ```bash
+docker-compose down
 docker-compose up --build
 ```
 
-Wil je zeker zijn dat er geen oude lagen worden hergebruikt (bij hardnekkige cacheproblemen), gebruik dan:
-
-```bash
-docker-compose build --no-cache
-docker-compose up
-```
-
-Of verwijder de oude image handmatig en start opnieuw:
+Wil je zeker zijn dat er geen oude lagen worden hergebruikt (bij hardnekkige cacheproblemen), verwijder dan de oude image handmatig en start opnieuw:
 
 ```bash
 docker-compose down
@@ -119,30 +111,7 @@ Het gedownloade model blijft bewaard in een Docker volume (`ollama_data`) en hoe
 
 ## Rol aanpassen
 
-Pas het bestand `config/role.json` aan en start de applicatie opnieuw op:
-
-```json
-{
-  "role": "AI Code Testing Tutor",
-  "description": "Expert software tester assistant",
-  "primaryTask": "Assist with all aspects of software testing",
-  "responsibilities": [
-    "Write test cases and test plans",
-    "..."
-  ],
-  "behavior": [
-    "Be concise and precise",
-    "..."
-  ]
-}
-```
-
-Start daarna opnieuw op:
-
-```bash
-docker-compose down
-docker-compose up --build
-```
+Pas het bestand `config/role.json` aan en start de applicatie opnieuw op.
 
 ---
 
